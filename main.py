@@ -43,28 +43,37 @@ def extract_tiles(image, tile_size):
 def image_edge_cost(tile_data):
     """Return an edge cost function that compares pixel borders via RMSE.
 
-    axis 0 = vertical (row direction), axis 1 = horizontal (col direction).
+    label is (axis, delta) from Puzzle.grid:
+      axis 0 = vertical (rows), axis 1 = horizontal (cols)
+      delta +1 = neighbor at higher index, -1 = lower index
     """
-    def cost(tile_a, tile_b, axis):
+    def cost(tile_a, orient_a, tile_b, orient_b, label):
+        axis, delta = label
         a = tile_data[tile_a]
         b = tile_data[tile_b]
-        if axis == 1:  # horizontal: a is left of b
-            diff = a[:, -1, :] - b[:, 0, :]
-        else:  # vertical: a is above b
-            diff = a[-1, :, :] - b[0, :, :]
+        if axis == 0:
+            if delta == 1:  # b is below a
+                diff = a[-1, :, :] - b[0, :, :]
+            else:  # b is above a
+                diff = a[0, :, :] - b[-1, :, :]
+        else:
+            if delta == 1:  # b is right of a
+                diff = a[:, -1, :] - b[:, 0, :]
+            else:  # b is left of a
+                diff = a[:, 0, :] - b[:, -1, :]
         return np.sqrt((diff ** 2).mean())
     return cost
 
 
 def render(puzzle, tile_data, tile_size):
     """Reconstruct an image array from the current puzzle state."""
-    h = puzzle.height * tile_size
-    w = puzzle.width * tile_size
+    h = puzzle.grid_shape[0] * tile_size
+    w = puzzle.grid_shape[1] * tile_size
     channels = next(iter(tile_data.values())).shape[2]
     img = np.zeros((h, w, channels), dtype=np.uint8)
-    for r in range(puzzle.height):
-        for c in range(puzzle.width):
-            tid = puzzle.tiles[r, c]
+    for r in range(puzzle.grid_shape[0]):
+        for c in range(puzzle.grid_shape[1]):
+            tid = puzzle.tiles[(r, c)]
             img[
                 r * tile_size:(r + 1) * tile_size,
                 c * tile_size:(c + 1) * tile_size,
@@ -81,7 +90,7 @@ def main():
 
     tile_data, tile_ids, h, w = extract_tiles(shuffled, tile_size)
     cost_fn = image_edge_cost(tile_data)
-    puzzle = Puzzle((h, w), tile_ids, cost_fn)
+    puzzle = Puzzle.grid((h, w), tile_ids, cost_fn)
 
     solver = Anneal(puzzle)
     solver.run(start_temp=160, end_temp=25, num_steps=4e6, sigma=80)
