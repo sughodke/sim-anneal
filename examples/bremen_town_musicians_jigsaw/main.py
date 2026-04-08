@@ -8,8 +8,9 @@ import scipy.io as sio
 import numpy as np
 from PIL import Image
 
-import os
+import sys, os
 os.environ.setdefault('JAX_PLATFORMS', 'cpu')
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from puzzle import Puzzle
 from jax_anneal import JaxAnneal
@@ -89,7 +90,8 @@ def render(puzzle, tile_data, tile_size):
 def main():
     tile_size = 25
 
-    mat = sio.loadmat('shuffledImageEasy.mat')
+    here = os.path.dirname(__file__)
+    mat = sio.loadmat(os.path.join(here, 'shuffledImageEasy.mat'))
     shuffled = mat['RGBrearranged'].astype(np.float64)
 
     tile_data, tile_ids, h, w = extract_tiles(shuffled, tile_size)
@@ -100,7 +102,7 @@ def main():
     solver.run_parallel(start_temp=300, end_temp=1, num_steps=4e6, n_chains=16, sigma=80)
 
     result = render(puzzle, tile_data, tile_size)
-    Image.fromarray(result).save('result.png')
+    Image.fromarray(result).save(os.path.join(here, 'result.png'))
     print("Saved result.png")
 
 
