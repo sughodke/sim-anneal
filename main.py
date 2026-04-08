@@ -97,7 +97,7 @@ def main():
     puzzle = Puzzle.grid((h, w), tile_ids, cost_fn)
 
     solver = JaxAnneal(puzzle)
-    solver.run(start_temp=300, end_temp=1, num_steps=4e6)
+    solver.run_parallel(start_temp=300, end_temp=1, num_steps=4e6, n_chains=16)
 
     result = render(puzzle, tile_data, tile_size)
     Image.fromarray(result).save('result.png')
