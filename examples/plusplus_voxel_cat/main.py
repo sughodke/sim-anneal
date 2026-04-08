@@ -137,6 +137,59 @@ def render_slices(voxels, shape, tile_size=16):
     return img
 
 
+def export_ply(voxels, path):
+    """Export voxels as a colored PLY mesh.
+
+    Only emits exposed faces (where a voxel borders air). Each quad face
+    is split into two triangles with the voxel's RGB color.
+    """
+    # 6 face directions: (axis_offset, vertices_template)
+    # Each face is 4 vertices forming a quad on one side of the unit cube
+    face_defs = [
+        # (dx,dy,dz) neighbor offset, then 4 corner vertices of the face
+        ((-1, 0, 0), [(0,0,0),(0,1,0),(0,1,1),(0,0,1)]),  # -X
+        ((+1, 0, 0), [(1,0,0),(1,0,1),(1,1,1),(1,1,0)]),  # +X
+        ((0, -1, 0), [(0,0,0),(0,0,1),(1,0,1),(1,0,0)]),  # -Y
+        ((0, +1, 0), [(0,1,0),(1,1,0),(1,1,1),(0,1,1)]),  # +Y
+        ((0, 0, -1), [(0,0,0),(1,0,0),(1,1,0),(0,1,0)]),  # -Z
+        ((0, 0, +1), [(0,0,1),(0,1,1),(1,1,1),(1,0,1)]),  # +Z
+    ]
+
+    vertices = []
+    faces = []  # (v0, v1, v2, r, g, b)
+
+    for (x, y, z), color in voxels.items():
+        r, g, b = int(color[0]), int(color[1]), int(color[2])
+        for (dx, dy, dz), corners in face_defs:
+            neighbor = (x + dx, y + dy, z + dz)
+            if neighbor in voxels:
+                continue  # face is hidden
+            # Emit quad as 2 triangles
+            base = len(vertices)
+            for cx, cy, cz in corners:
+                vertices.append((x + cx, y + cy, z + cz))
+            faces.append((base, base+1, base+2, r, g, b))
+            faces.append((base, base+2, base+3, r, g, b))
+
+    with open(path, 'w') as f:
+        f.write("ply\n")
+        f.write("format ascii 1.0\n")
+        f.write(f"element vertex {len(vertices)}\n")
+        f.write("property float x\n")
+        f.write("property float y\n")
+        f.write("property float z\n")
+        f.write(f"element face {len(faces)}\n")
+        f.write("property list uchar int vertex_indices\n")
+        f.write("property uchar red\n")
+        f.write("property uchar green\n")
+        f.write("property uchar blue\n")
+        f.write("end_header\n")
+        for vx, vy, vz in vertices:
+            f.write(f"{vx} {vy} {vz}\n")
+        for v0, v1, v2, r, g, b in faces:
+            f.write(f"3 {v0} {v1} {v2} {r} {g} {b}\n")
+
+
 def main():
     shape = (14, 10, 16)
     voxels, shape = build_cat(shape)
@@ -149,7 +202,8 @@ def main():
     # Save target
     target_img = render_slices(voxels, shape)
     Image.fromarray(target_img).save(os.path.join(here, 'target.png'))
-    print("Saved target.png (Z-layer slices)")
+    export_ply(voxels, os.path.join(here, 'target.ply'))
+    print("Saved target.png + target.ply")
 
     # Build tile data: map tile_id -> color
     filled_positions = sorted(voxels.keys())
@@ -201,7 +255,8 @@ def main():
 
     result_img = render_slices(result_voxels, shape)
     Image.fromarray(result_img).save(os.path.join(here, 'result.png'))
-    print(f"\nSaved result.png")
+    export_ply(result_voxels, os.path.join(here, 'result.ply'))
+    print(f"\nSaved result.png + result.ply")
 
 
 if __name__ == '__main__':
