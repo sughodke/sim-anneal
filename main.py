@@ -8,7 +8,11 @@ import scipy.io as sio
 import numpy as np
 from PIL import Image
 
-from puzzle import Puzzle, Anneal
+import os
+os.environ.setdefault('JAX_PLATFORMS', 'cpu')
+
+from puzzle import Puzzle
+from jax_anneal import JaxAnneal
 
 
 # --- Image-specific helpers ---
@@ -92,8 +96,8 @@ def main():
     cost_fn = image_edge_cost(tile_data)
     puzzle = Puzzle.grid((h, w), tile_ids, cost_fn)
 
-    solver = Anneal(puzzle)
-    solver.run(start_temp=160, end_temp=25, num_steps=4e6, sigma=80)
+    solver = JaxAnneal(puzzle)
+    solver.run(start_temp=300, end_temp=1, num_steps=4e6)
 
     result = render(puzzle, tile_data, tile_size)
     Image.fromarray(result).save('result.png')
