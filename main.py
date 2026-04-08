@@ -1,7 +1,7 @@
 import scipy.io as sio
 import numpy as np
 from matplotlib import pyplot as plt
-from scipy.misc import toimage
+from PIL import Image
 import time
 
 
@@ -66,7 +66,7 @@ class Data:
 		self.width = width
 
 	def show(self):
-		toimage(self.image).show()
+		Image.fromarray(self.image.astype(np.uint8)).show()
 
 	def swap(self, i1, j1, i2, j2):
 		t1 = np.copy(self.image[25*i1 : 25*(i1+1), 25*j1 : 25*(j1+1), :])
@@ -93,7 +93,7 @@ class Logger:
 			self.pAcceptCurr += pAccept
 			self.counter += 1
 			if (self.counter >= self.rate):
-				print("pAccept = " + str(self.pAcceptCurr / self.rate))
+				print(f"pAccept = {self.pAcceptCurr / self.rate}")
 				self.pAcceptArr = np.append(self.pAcceptArr, self.pAcceptCurr / self.rate)
 				self.pAcceptCurr = 0
 				self.counter = 0
@@ -124,7 +124,7 @@ class Proposal:
 		self.computeEnergies()
 
 	def computeEnergies(self):
-		self.sortedTiles = map(lambda (i,j): (Energy(self.data).getEnergyAround((i,j)), (i,j)), self.indices)
+		self.sortedTiles = [(Energy(self.data).getEnergyAround((i, j)), (i, j)) for i, j in self.indices]
 		self.sortedTiles.sort(reverse=True)
 
 	def get(self):
@@ -173,14 +173,14 @@ class Anneal:
 		self.proposal = Proposal(self.data, proposalSigma)
 		startExp = np.log10(start)
 		endExp = np.log10(end)
-		tempArray = np.logspace(startExp, endExp, numSteps)
+		tempArray = np.logspace(startExp, endExp, int(numSteps))
 		i = 0
 		for temperature in np.nditer(tempArray):
 			self.step(temperature)
 			i += 1
 			if (i % loggingRate == 0):
 				self.energy = Energy(self.data).energy()
-				print("E=" + str(self.energy) + " at temperature = " + str(temperature) + " time.clock() = " + str(time.clock()))
+				print(f"E={self.energy} at temperature = {temperature} time = {time.perf_counter():.2f}")
 				self.logger.update(energy = self.energy)
 
 
