@@ -9,3 +9,8 @@ dependencies = [
     "pillow>=12.2.0",
     "scipy>=1.17.1",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]

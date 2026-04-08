@@ -41,11 +41,14 @@ def extract_tiles(image, tile_size):
 
 
 def image_edge_cost(tile_data):
-    """Return an edge cost function that compares pixel borders via RMSE."""
-    def cost(tile_a, tile_b, direction):
+    """Return an edge cost function that compares pixel borders via RMSE.
+
+    axis 0 = vertical (row direction), axis 1 = horizontal (col direction).
+    """
+    def cost(tile_a, tile_b, axis):
         a = tile_data[tile_a]
         b = tile_data[tile_b]
-        if direction == 'horizontal':  # a is left of b
+        if axis == 1:  # horizontal: a is left of b
             diff = a[:, -1, :] - b[:, 0, :]
         else:  # vertical: a is above b
             diff = a[-1, :, :] - b[0, :, :]
@@ -78,7 +81,7 @@ def main():
 
     tile_data, tile_ids, h, w = extract_tiles(shuffled, tile_size)
     cost_fn = image_edge_cost(tile_data)
-    puzzle = Puzzle(h, w, tile_ids, cost_fn)
+    puzzle = Puzzle((h, w), tile_ids, cost_fn)
 
     solver = Anneal(puzzle)
     solver.run(start_temp=160, end_temp=25, num_steps=4e6, sigma=80)
